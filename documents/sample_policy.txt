@@ -1,6 +1,6 @@
 Remote Work Policy
 
-Employees are permitted to work remotely up to three days per week with manager approval.
+Employees are permitted to work remotely up to two days per week with manager approval.
 All remote access to company systems must use VPN and multi-factor authentication.
 Sensitive company data must not be stored on personal devices.
 Employees must complete annual security awareness training.

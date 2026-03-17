@@ -18,7 +18,7 @@ from app.logging_config import setup_logging
 from app.retriever import retrieve_context
 from app.schemas import AskRequest, AskResponse, UploadResponse
 from app.utils import deduplicate_sources, ensure_directory, sanitize_filename
-from app.vector_store import store_chunks
+from app.vector_store import store_chunks, delete_chunks_by_source
 
 # Configure logging once at startup.
 setup_logging()
@@ -46,12 +46,14 @@ def health_check() -> dict:
     """
     return {"status": "ok"}
 
-
 @app.post("/upload", response_model=UploadResponse)
 async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     """
     Upload a document, extract text, chunk it, embed the chunks,
     and store them in the vector database.
+
+    If a document with the same filename was indexed earlier, its old
+    chunks are deleted first so the latest upload replaces prior vectors.
     """
     try:
         if not file.filename:
@@ -90,6 +92,11 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
         if not chunks:
             raise HTTPException(status_code=400, detail="No chunks were created from the uploaded document.")
 
+        # Replace previously indexed vectors for the same filename.
+        deleted_count = delete_chunks_by_source(filename)
+        if deleted_count:
+            logger.info("Deleted %s existing chunks for source %s", deleted_count, filename)
+
         chunk_texts = [chunk["text"] for chunk in chunks]
         embeddings = get_embeddings(chunk_texts)
         indexed_count = store_chunks(chunks, embeddings)
@@ -107,10 +114,9 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     except ValueError as exc:
         logger.exception("Document validation failed")
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
+    except Exception:
         logger.exception("Document upload failed")
         raise HTTPException(status_code=500, detail="Internal server error during document upload.")
-
 
 @app.post("/ask", response_model=AskResponse)
 def ask_question(request: AskRequest) -> AskResponse:

@@ -64,3 +64,27 @@ def reset_collection() -> None:
         pass
 
     collection = client.get_or_create_collection(name=COLLECTION_NAME)
+
+
+def delete_chunks_by_source(source: str) -> int:
+    """
+    Delete all chunks associated with the given source filename.
+
+    This supports document-level replacement so re-uploading the same file
+    does not create duplicate vectors in the collection.
+    """
+    if not source.strip():
+        raise ValueError("Source filename cannot be empty.")
+
+    existing = collection.get(
+        where={"source": source},
+        include=[]
+    )
+
+    ids = existing.get("ids", [])
+
+    if not ids:
+        return 0
+
+    collection.delete(ids=ids)
+    return len(ids)
