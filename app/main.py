@@ -1,7 +1,7 @@
 import logging
 import os
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.responses import JSONResponse
 
 from app.chunker import chunk_text
@@ -36,6 +36,8 @@ app = FastAPI(
 DOCUMENTS_DIR = "documents"
 ensure_directory(DOCUMENTS_DIR)
 
+ALLOWED_EXTENSIONS = {".txt", ".pdf", ".docx"}
+
 
 @app.get("/health")
 def health_check() -> dict:
@@ -52,12 +54,26 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     and store them in the vector database.
     """
     try:
-        filename = sanitize_filename(file.filename or "uploaded_file")
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Uploaded file must have a filename.")
+
+        filename = sanitize_filename(file.filename)
+        extension = os.path.splitext(filename)[1].lower()
+
+        if extension not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {extension}. Supported types are .txt, .pdf, .docx."
+            )
+
         file_path = os.path.join(DOCUMENTS_DIR, filename)
+
+        content = await file.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
         # Save uploaded content locally so it can be processed by the ingestion pipeline.
         with open(file_path, "wb") as saved_file:
-            content = await file.read()
             saved_file.write(content)
 
         logger.info("Uploaded file saved: %s", file_path)
@@ -72,7 +88,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
         )
 
         if not chunks:
-            raise ValueError("No chunks were created from the uploaded document.")
+            raise HTTPException(status_code=400, detail="No chunks were created from the uploaded document.")
 
         chunk_texts = [chunk["text"] for chunk in chunks]
         embeddings = get_embeddings(chunk_texts)
@@ -86,9 +102,14 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
             message="Document indexed successfully.",
         )
 
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        logger.exception("Document validation failed")
+        raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         logger.exception("Document upload failed")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="Internal server error during document upload.")
 
 
 @app.post("/ask", response_model=AskResponse)
@@ -127,13 +148,16 @@ def ask_question(request: AskRequest) -> AskResponse:
             retrieved_chunks_count=len(retrieved_chunks),
         )
 
-    except Exception as exc:
+    except ValueError as exc:
+        logger.exception("Question validation failed")
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
         logger.exception("Question answering failed")
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail="Internal server error during question answering.")
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
     """
     Catch any unhandled exceptions and return a consistent JSON error format.
     """
@@ -142,6 +166,6 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={
             "status": "error",
-            "message": str(exc),
+            "message": "An unexpected internal server error occurred.",
         },
     )
