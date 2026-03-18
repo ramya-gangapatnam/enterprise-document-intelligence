@@ -8,7 +8,7 @@ client = chromadb.PersistentClient(path=CHROMA_PATH)
 collection = client.get_or_create_collection(name=COLLECTION_NAME)
 
 
-def store_chunks(chunks: List[Dict], embeddings: List[List[float]]) -> int:
+def store_chunks(chunks: List[Dict], embeddings: List[List[float]], file_hash: str) -> int:
     """
     Store chunk text, metadata, and embeddings in ChromaDB.
     """
@@ -24,6 +24,7 @@ def store_chunks(chunks: List[Dict], embeddings: List[List[float]]) -> int:
         {
             "source": chunk["source"],
             "chunk_index": chunk["chunk_index"],
+            "file_hash": file_hash,
         }
         for chunk in chunks
     ]
@@ -107,3 +108,19 @@ def source_exists(source: str) -> bool:
     ids = results.get("ids", [])
 
     return bool(ids)
+
+def get_existing_file_hash(source: str) -> str | None:
+    """
+    Retrieve stored file hash for a given source.
+    Returns None if the file is not indexed.
+    """
+    results = collection.get(where={"source": source})
+
+    metadatas = results.get("metadatas", [])
+
+    if not metadatas:
+        return None
+
+    # All chunks share the same file_hash → take first
+    first = metadatas[0][0] if isinstance(metadatas[0], list) else metadatas[0]
+    return first.get("file_hash")

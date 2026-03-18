@@ -17,8 +17,8 @@ from app.llm_service import generate_answer
 from app.logging_config import setup_logging
 from app.retriever import retrieve_context
 from app.schemas import AskRequest, AskResponse, UploadResponse
-from app.utils import deduplicate_sources, ensure_directory, sanitize_filename
-from app.vector_store import store_chunks, delete_chunks_by_source, source_exists
+from app.utils import deduplicate_sources, ensure_directory, sanitize_filename, compute_file_hash
+from app.vector_store import store_chunks, delete_chunks_by_source, source_exists, get_existing_file_hash
 
 # Configure logging once at startup.
 setup_logging()
@@ -71,6 +71,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
         file_path = os.path.join(DOCUMENTS_DIR, filename)
 
         content = await file.read()
+        file_hash = compute_file_hash(content)
         if not content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
@@ -91,6 +92,18 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
         if not chunks:
             raise HTTPException(status_code=400, detail="No chunks were created from the uploaded document.")
+        
+        # Check if file already exists and is unchanged
+        existing_hash = get_existing_file_hash(filename)
+
+        if existing_hash and existing_hash == file_hash:
+            logger.info("File %s unchanged. Skipping re-indexing.", filename)
+
+            return UploadResponse(
+                filename=filename,
+                chunks_indexed=0,
+                message="Document unchanged. Existing index reused.",
+            )
 
         # Replace previously indexed vectors for the same filename.
         deleted_count = delete_chunks_by_source(filename)
@@ -99,7 +112,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
         chunk_texts = [chunk["text"] for chunk in chunks]
         embeddings = get_embeddings(chunk_texts)
-        indexed_count = store_chunks(chunks, embeddings)
+        indexed_count = store_chunks(chunks, embeddings, file_hash)
 
         logger.info("Indexed %s chunks for %s", indexed_count, filename)
 

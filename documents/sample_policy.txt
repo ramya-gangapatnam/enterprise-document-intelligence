@@ -1,13 +1,13 @@
 Remote Work Policy
 
-Employees are permitted to work remotely up to two days per week with manager approval.
+Employees are permitted to work remotely up to three days per week with manager approval.
 All remote access to company systems must use VPN and multi-factor authentication.
 Sensitive company data must not be stored on personal devices.
 Employees must complete annual security awareness training.
 
 Leave Policy
 
-Full-time employees receive 15 days of paid time off annually.
+Full-time employees receive 25 days of paid time off annually.
 Unused PTO may be carried over up to 5 days into the following calendar year.
 Sick leave is tracked separately from paid time off.
 
