@@ -1,0 +1,18 @@
+Remote Work Policy
+
+Employees are permitted to work remotely up to two days per week with manager approval.
+All remote access to company systems must use VPN and multi-factor authentication.
+Sensitive company data must not be stored on personal devices.
+Employees must complete annual security awareness training.
+
+Leave Policy
+
+Full-time employees receive 15 days of paid time off annually.
+Unused PTO may be carried over up to 5 days into the following calendar year.
+Sick leave is tracked separately from paid time off.
+
+Access Control Policy
+
+System access is granted based on job responsibilities and least privilege principles.
+Managers must submit access requests for new employees.
+All privileged access must be reviewed quarterly.

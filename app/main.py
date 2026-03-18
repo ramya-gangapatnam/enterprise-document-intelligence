@@ -18,7 +18,7 @@ from app.logging_config import setup_logging
 from app.retriever import retrieve_context
 from app.schemas import AskRequest, AskResponse, UploadResponse
 from app.utils import deduplicate_sources, ensure_directory, sanitize_filename
-from app.vector_store import store_chunks, delete_chunks_by_source
+from app.vector_store import store_chunks, delete_chunks_by_source, source_exists
 
 # Configure logging once at startup.
 setup_logging()
@@ -127,6 +127,14 @@ def ask_question(request: AskRequest) -> AskResponse:
     try:
         logger.info("Received question: %s", request.question)
 
+        # Validate that requested source exists in vector DB
+        if request.source:
+            if not source_exists(request.source):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Source '{request.source}' not found in indexed documents. Please upload it first."
+                )
+
         retrieved_chunks = retrieve_context(
             question=request.question,
             top_k=TOP_K_RESULTS,
@@ -155,6 +163,8 @@ def ask_question(request: AskRequest) -> AskResponse:
             retrieved_chunks_count=len(retrieved_chunks),
         )
 
+    except HTTPException:
+        raise
     except ValueError as exc:
         logger.exception("Question validation failed")
         raise HTTPException(status_code=400, detail=str(exc))

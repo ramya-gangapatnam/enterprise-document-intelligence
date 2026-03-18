@@ -94,3 +94,16 @@ def delete_chunks_by_source(source: str) -> int:
 
     collection.delete(ids=ids)
     return len(ids)
+
+
+def source_exists(source: str) -> bool:
+    """
+    Check whether any indexed chunks exist for the given source filename.
+    """
+    if not source or not source.strip():
+        return False
+
+    results = collection.get(where={"source": source.strip()})
+    ids = results.get("ids", [])
+
+    return bool(ids)
