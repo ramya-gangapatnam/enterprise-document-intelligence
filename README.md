@@ -16,19 +16,13 @@ It is designed not just to “work,” but to behave predictably, avoid common p
 ---
 
 ## How It Works
-User Question
-↓
-Convert to embedding
-↓
-Search vector database (ChromaDB)
-↓
-Retrieve relevant chunks
-↓
-Build prompt with context
-↓
-LLM generates answer
-↓
-Return answer + sources + metrics
+- User submits a question  
+- Convert the question into an embedding  
+- Search the vector database (**ChromaDB**)  
+- Retrieve relevant chunks  
+- Build a prompt with retrieved context  
+- Send the prompt to the LLM  
+- Return the answer, sources, and metrics  
 
 ---
 
@@ -57,8 +51,6 @@ Return answer + sources + metrics
 
 ### Scoped Retrieval (By File)
 You can query a specific document:
-
-```json
 {
   "question": "How many remote work days are allowed?",
   "source": "sample_policy.txt"
