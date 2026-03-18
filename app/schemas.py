@@ -11,7 +11,10 @@ class AskRequest(BaseModel):
         min_length=3,
         description="User question about uploaded enterprise documents"
     )
-
+    source: Optional[str] = Field(
+        default=None,
+        description="Optional filename to scope retrieval to a specific uploaded document"
+    )
 
 class AskResponse(BaseModel):
     """

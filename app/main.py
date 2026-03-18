@@ -130,6 +130,7 @@ def ask_question(request: AskRequest) -> AskResponse:
         retrieved_chunks = retrieve_context(
             question=request.question,
             top_k=TOP_K_RESULTS,
+            source=request.source,
         )
 
         if not retrieved_chunks:

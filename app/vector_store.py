@@ -38,17 +38,23 @@ def store_chunks(chunks: List[Dict], embeddings: List[List[float]]) -> int:
     return len(chunks)
 
 
-def query_chunks(query_embedding: List[float], top_k: int = 4) -> Dict:
+def query_chunks(query_embedding: List[float], top_k: int = 4, source: str | None = None) -> Dict:
     """
-    Query the vector store using a query embedding and return top matches.
+    Query the vector store using a query embedding.
+    If source is provided, retrieval is scoped to that specific filename.
     """
     if not query_embedding:
         raise ValueError("Query embedding cannot be empty.")
 
-    return collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-    )
+    query_params = {
+        "query_embeddings": [query_embedding],
+        "n_results": top_k,
+    }
+
+    if source:
+        query_params["where"] = {"source": source}
+
+    return collection.query(**query_params)
 
 
 def reset_collection() -> None:
