@@ -162,7 +162,7 @@ def ask_question(request: AskRequest) -> AskResponse:
                 retrieved_chunks_count=0,
             )
 
-        answer = generate_answer(
+        llm_result = generate_answer(
             question=request.question,
             retrieved_chunks=retrieved_chunks,
         )
@@ -171,9 +171,14 @@ def ask_question(request: AskRequest) -> AskResponse:
 
         return AskResponse(
             question=request.question,
-            answer=answer,
+            answer=llm_result["answer"],
             sources=sources,
             retrieved_chunks_count=len(retrieved_chunks),
+            model_used=llm_result["model_used"],
+            latency_ms=llm_result["latency_ms"],
+            input_tokens=llm_result["input_tokens"],
+            output_tokens=llm_result["output_tokens"],
+            total_tokens=llm_result["total_tokens"],
         )
 
     except HTTPException:
